@@ -12,7 +12,6 @@ class Celula(object):
     def __init__(self):
         self.xna = json.load(open('xna_tiles/xna_demo.json', 'r'))
         # self.display = display
-        self.energia = 0
         self.fonte_luz = None
         self.gerar_estrutura()
 
@@ -30,40 +29,36 @@ class Celula(object):
         #DE: CARIOTECA
         for id, particula in self.carioteca.interior.copy().items():
             if particula.transportando:
-                self.citoplasma.ocupa_interior(particula)
-                self.carioteca.interior.pop(id)
+                self.migrar(self.citoplasma, self.carioteca, particula)
 
                 if particula.destino != "Citoplasma" and particula.destino != "Cloroplasto":
-                    self.membrana.ocupa_interior(particula)
-                    self.citoplasma.interior.pop(id)
+                    self.migrar(self.membrana, self.citoplasma, particula)
 
                     if particula.destino != "Membrana":
                         self.parede_celular.emissor = {particula.nome: particula.destino}
                         self.membrana.interior.pop(id)
+                        self.citoplasma.pedir_energia(self.parede_celular, 1, 1)
 
                 if particula.destino == "Cloroplasto":
-                    self.cloroplastos.ocupa_interior(particula)
-                    self.citoplasma.interior.pop(id)
+                    self.migrar(self.cloroplastos, self.citoplasma, particula)
 
 
         #DE: CITOPLASMA
         for id, particula in self.citoplasma.interior.copy().items():
             if particula.transportando:
                 if particula.destino == "Carioteca":
-                    self.carioteca.ocupa_interior(particula)
-                    self.citoplasma.interior.pop(id)
+                    self.migrar(self.carioteca, self.citoplasma, particula)
 
                 elif particula.destino != "Cloroplasto":
-                    self.membrana.ocupa_interior(particula)
-                    self.citoplasma.interior.pop(id)
+                    self.migrar(self.membrana, self.citoplasma, particula)
 
                     if particula.destino != "Membrana":
                         self.parede_celular.emissor = {particula.nome: particula.destino}
                         self.membrana.interior.pop(id)
+                        self.citoplasma.pedir_energia(self.parede_celular, 1, 1)
 
                 else:
-                    self.cloroplastos.ocupa_interior(particula)
-                    self.citoplasma.interior.pop(id)
+                    self.migrar(self.cloroplastos, self.citoplasma, particula)
 
         #DE: MEMBRANA
         for id, particula in self.membrana.interior.copy().items():
@@ -71,53 +66,84 @@ class Celula(object):
                 if particula.destino == "Parede":
                     self.parede_celular.emissor = {particula.nome: particula.destino}
                     self.membrana.interior.pop(id)
+                    self.citoplasma.pedir_energia(self.parede_celular, 1, 1)
                 else:
-                    self.citoplasma.ocupa_interior(particula)
-                    self.membrana.interior.pop(id)
+                    self.migrar(self.citoplasma, self.membrana, particula)
 
                     if particula.destino != "Citoplasma" and particula.destino != "Cloroplasto":
-                        self.carioteca.ocupa_interior(particula)
-                        self.citoplasma.interior.pop(id)
+                        self.migrar(self.carioteca, self.citoplasma, particula)
 
                     elif particula.destino == "Cloroplasto":
-                        self.cloroplastos.ocupa_interior(particula)
-                        self.citoplasma.interior.pop(id)
+                        self.migrar(self.cloroplastos, self.citoplasma, particula)
 
         #print(f'Tempo laço: {time.perf_counter() - incial}')
 
     def gera_energia(self):
-        self.energia += self.cloroplastos.fotossintese(self.fonte_luz)
+        self.citoplasma.energia += self.cloroplastos.fotossintese(self.fonte_luz)
+
+    def migrar(self, destino, origem, particula):
+        if destino in ["Parede", "Cloroplasto"]:
+            if self.citoplasma.pedir_energia(self.parede_celular, 1, 1, retorno=True):
+                self.parede_celular.emissor = {particula.nome: particula.destino}
+                self.membrana.interior.pop(id)
+        else:
+            if self.citoplasma.pedir_energia(destino, 1, 0.1):
+                ocupa_interior(destino, particula)
+                origem.interior.pop(particula.id)
 
 
+
+def ocupa_interior(self, particula):
+    self.interior[particula.id] = particula
+    
+    
 class Carioteca(object):
     def __init__(self):
         self.interior = {}
-
-    def ocupa_interior(self, particula):
-        self.interior[particula.id] = particula
+        self.energia = 0
 
 
 class Citoplasma(object):
     def __init__(self):
         self.interior = {}
+        self.energia = 0
+        self.pilha = []
+    
+    def pedir_energia(self, receptor, importancia, quantidade, retorno=False):
+        self.pilha.append({"receptor": receptor, "importancia": importancia, "quantidade": quantidade, "retorno": retorno})
+        return self.conceder_energia()
 
-    def ocupa_interior(self, particula):
-        self.interior[particula.id] = particula
+    def conceder_energia(self):
+        for pedido in self.pilha:
+            pedido["importancia"] -= 1
+            maior = {"importancia": 0} #maior importancia
+        for i, pedido in enumerate(self.pilha):
+            if pedido["importancia"] > maior["importancia"]:
+                maior = pedido
+                print(f'maior = {maior} {pedido}')
+
+        if self.energia > pedido["quantidade"]:
+            self.energia -= pedido["quantidade"]
+            if pedido["retorno"]:
+                pedido["receptor"].energia += pedido["quantidade"]
+            del(self.pilha[i])
+            return True
+        else:
+            return False
 
 
 class Membrana(object):
     def __init__(self):
         self.osmose_taxa = 0
         self.interior = {}
-
-    def ocupa_interior(self, particula):
-        self.interior[particula.id] = particula
+        self.energia = 0
 
 
 class ParedeCelular(object):
     def __init__(self):
         self.receptores = {}
         self.emissor = {}
+        self.energia = 0
 
 
 class Cloroplasto(object):
@@ -126,9 +152,6 @@ class Cloroplasto(object):
         self.retorno_energetico = 2
         self.alias = "Cloroplasto"
         self.recursos = {"Água": 0, "CO2": 0}
-
-    def ocupa_interior(self, particula):
-        self.interior[particula.id] = particula
 
     # PRECISA DE OTIMIZAÇÃO!!
     def fotossintese(self, fonte_luz):
@@ -143,9 +166,9 @@ class Cloroplasto(object):
                     # gasta os recursos usados
                     self.gastar_substancia("Água", 1)
                     self.gastar_substancia("CO2", 1)
-                    # gera e aloca o produto da reacao FUTURAMENTE USADO COMO ENERGIA BRUTA
+                    # gera e aloca o produto da reacao
                     acucar = Particula("O2", transportando=True, destino="Exterior")
-                    self.ocupa_interior(acucar)
+                    ocupa_interior(self, acucar)
                     return self.retorno_energetico
             else:
                 return 0
@@ -181,15 +204,16 @@ class FonteLuz(object):
         self.comprimento = comprimento
         self.abundancia = abundancia
 
-
+##TESTES INCIAIS
 if True:
     gas_carbonico = Particula("CO2", transportando=True, destino="Cloroplasto")
     agua = Particula("Água", transportando=True, destino="Cloroplasto")
     # adrenalina = Particula("Adrenalina", transportando=True, destino="Cloroplasto")
 
     celula = Celula()
-    celula.carioteca.ocupa_interior(gas_carbonico)
-    celula.citoplasma.ocupa_interior(agua)
+    celula.citoplasma.energia += 50
+    ocupa_interior(celula.membrana, gas_carbonico)
+    ocupa_interior(celula.citoplasma, agua)
 
     # celula.membrana.ocupa_interior(adrenalina)
 
@@ -197,3 +221,25 @@ if True:
     celula.transporte_passivo()
     celula.fonte_luz = FonteLuz(700, 1)
     celula.gera_energia()
+
+##POG
+Teste = False
+if Teste == True:
+    ambientes = {"Carioteca": celula.carioteca, "Citoplasma": celula.citoplasma,
+                 "Cloroplasto": celula.cloroplastos, "Membrana": celula.membrana, "Parede": celula.parede_celular}
+    ambientes_nomes = ambientes.keys()
+    nome = ["Água", "CO2", "Glicose", "Amido", "Formaldeido", "RNA"]
+    import random
+    tamanho = 5
+
+    celula.parede_celular.interior = {}
+    def particler():
+        particle = Particula(nome[random.randint(0, tamanho)], transportando=random.choice([True, False]),
+                             destino=random.choice([ambiente for ambiente in ambientes_nomes]))
+        ocupa_interior(ambientes[random.choice([ambiente for ambiente in ambientes_nomes])], particle)
+
+
+    for i in range(10):
+        if i & 2 == 0:
+            particler()
+            time.sleep(0.2)
