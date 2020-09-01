@@ -245,4 +245,4 @@ if Teste == True:
             particler()
             #time.sleep(0.2)
         celula.transporte_passivo()
-    print(time.perf_counter() - incial)
+    print(f'TEMPO DECORRIDO: {time.perf_counter() - incial}')
