@@ -222,9 +222,10 @@ if True:
     celula.fonte_luz = FonteLuz(700, 1)
     celula.gera_energia()
 
-##POG
-Teste = False
+##POG ADICIONA 100 PARTICULAS ALEATORIAS EM ORGANELAS ALEATORIAS, E AS TRANSPORTA. TEMPO MÉDIO 0.002
+Teste = True
 if Teste == True:
+    incial = time.perf_counter()
     ambientes = {"Carioteca": celula.carioteca, "Citoplasma": celula.citoplasma,
                  "Cloroplasto": celula.cloroplastos, "Membrana": celula.membrana, "Parede": celula.parede_celular}
     ambientes_nomes = ambientes.keys()
@@ -239,7 +240,9 @@ if Teste == True:
         ocupa_interior(ambientes[random.choice([ambiente for ambiente in ambientes_nomes])], particle)
 
 
-    for i in range(10):
+    for i in range(100):
         if i & 2 == 0:
             particler()
-            time.sleep(0.2)
+            #time.sleep(0.2)
+        celula.transporte_passivo()
+    print(time.perf_counter() - incial)
