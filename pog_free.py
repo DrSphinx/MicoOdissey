@@ -13,6 +13,7 @@ class Celula(object):
         self.xna = json.load(open('xna_tiles/xna_demo.json', 'r'))
         # self.display = display
         self.energia = 0
+        self.fonte_luz = None
         self.gerar_estrutura()
 
     def gerar_estrutura(self):
@@ -85,7 +86,7 @@ class Celula(object):
         #print(f'Tempo laço: {time.perf_counter() - incial}')
 
     def gera_energia(self):
-        self.energia += self.cloroplastos.fotossintese()
+        self.energia += self.cloroplastos.fotossintese(self.fonte_luz)
 
 
 class Carioteca(object):
@@ -129,24 +130,25 @@ class Cloroplasto(object):
     def ocupa_interior(self, particula):
         self.interior[particula.id] = particula
 
-    #PRECISA DE OTIMIZAÇÃO
-    def fotossintese(self):
-        #conta cada tipo de substancia no interior do cloroplasto
+    # PRECISA DE OTIMIZAÇÃO!!
+    def fotossintese(self, fonte_luz):
+        # conta cada tipo de substancia no interior do cloroplasto
         self.inventario()
-        #verifica se tem os recursos minimos
-        if self.recursos["Água"] >= 1:
-            if self.recursos['CO2'] >= 1:
-                self.recursos["Água"] -= 1
-                self.recursos["CO2"] -= 1
-                #gasta os recursos usados
-                self.gastar_substancia("Água", 1)
-                self.gastar_substancia("CO2", 1)
-                #gera e aloca o produto da reacao FUTURAMENTE USADO COMO ENERGIA BRUTA
-                acucar = Particula("O2", transportando=True, destino="Exterior")
-                self.ocupa_interior(acucar)
-                return self.retorno_energetico
-        else:
-            return 0
+        # verifica se tem os recursos minimos
+        if fonte_luz is not None:
+            if self.recursos["Água"] >= 1:
+                if self.recursos['CO2'] >= 1:
+                    self.recursos["Água"] -= 1
+                    self.recursos["CO2"] -= 1
+                    # gasta os recursos usados
+                    self.gastar_substancia("Água", 1)
+                    self.gastar_substancia("CO2", 1)
+                    # gera e aloca o produto da reacao FUTURAMENTE USADO COMO ENERGIA BRUTA
+                    acucar = Particula("O2", transportando=True, destino="Exterior")
+                    self.ocupa_interior(acucar)
+                    return self.retorno_energetico
+            else:
+                return 0
 
     def inventario(self):
         for particula in self.interior.values():
@@ -174,16 +176,24 @@ class Particula(object):
         self.id = f"{randint(0,9)}{randint(0,9)}{randint(0,9)}"
 
 
-gas_carbonico = Particula("CO2", transportando=True, destino="Cloroplasto")
-agua = Particula("Água", transportando=True, destino="Cloroplasto")
-# adrenalina = Particula("Adrenalina", transportando=True, destino="Cloroplasto")
+class FonteLuz(object):
+    def __init__(self, comprimento, abundancia):
+        self.comprimento = comprimento
+        self.abundancia = abundancia
 
-celula = Celula()
-celula.carioteca.ocupa_interior(gas_carbonico)
-celula.citoplasma.ocupa_interior(agua)
 
-# celula.membrana.ocupa_interior(adrenalina)
+if True:
+    gas_carbonico = Particula("CO2", transportando=True, destino="Cloroplasto")
+    agua = Particula("Água", transportando=True, destino="Cloroplasto")
+    # adrenalina = Particula("Adrenalina", transportando=True, destino="Cloroplasto")
 
-print("\n\n\n")
-celula.transporte_passivo()
-celula.gera_energia()
+    celula = Celula()
+    celula.carioteca.ocupa_interior(gas_carbonico)
+    celula.citoplasma.ocupa_interior(agua)
+
+    # celula.membrana.ocupa_interior(adrenalina)
+
+    print("\n\n\n")
+    celula.transporte_passivo()
+    celula.fonte_luz = FonteLuz(700, 1)
+    celula.gera_energia()
