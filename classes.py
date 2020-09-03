@@ -33,6 +33,7 @@ class Celula(object):
         for id, particula in self.carioteca.interior.copy().items():
             if particula.transportando:
                 self.migrar(self.citoplasma, self.carioteca, particula)
+                self.carioteca.transportando = True
 
                 if particula.destino != "Citoplasma" and particula.destino != "Cloroplasto":
                     self.migrar(self.membrana, self.citoplasma, particula)
@@ -44,12 +45,14 @@ class Celula(object):
 
                 if particula.destino == "Cloroplasto":
                     self.migrar(self.cloroplastos, self.citoplasma, particula)
+                particula.transportando = False
 
         # DE: CITOPLASMA
         for id, particula in self.citoplasma.interior.copy().items():
             if particula.transportando:
                 if particula.destino == "Carioteca":
                     self.migrar(self.carioteca, self.citoplasma, particula)
+                    self.carioteca.transportando = True
 
                 elif particula.destino != "Cloroplasto":
                     self.migrar(self.membrana, self.citoplasma, particula)
@@ -61,6 +64,7 @@ class Celula(object):
 
                 else:
                     self.migrar(self.cloroplastos, self.citoplasma, particula)
+                particula.transportando = False
 
         # DE: MEMBRANA
         for id, particula in self.membrana.interior.copy().items():
@@ -74,11 +78,19 @@ class Celula(object):
 
                     if particula.destino != "Citoplasma" and particula.destino != "Cloroplasto":
                         self.migrar(self.carioteca, self.citoplasma, particula)
+                        self.carioteca.transportando = True
 
                     elif particula.destino == "Cloroplasto":
                         self.migrar(self.cloroplastos, self.citoplasma, particula)
+                particula.transportando = False
 
-        # print(f'Tempo laço: {time.perf_counter() - incial}')
+        # DE: CLOROPLASTO
+        for id, particula in self.cloroplastos.interior.copy().items():
+            if particula.transportando:
+                if particula.destino == "Citoplasma":
+                    self.migrar(self.citoplasma, self.cloroplastos, particula)
+        import time
+
 
     def gera_energia(self):
         self.citoplasma.energia += self.cloroplastos.fotossintese(self.fonte_luz)
@@ -93,18 +105,12 @@ class Celula(object):
                 ocupa_interior(destino, particula)
                 origem.interior.pop(particula.id)
 
-    def iter(self):
-        def transporte():
-            self.transporte_passivo()
-
-        def energizar():
-            self.gera_energia()
-
 
 class Carioteca(object):
     def __init__(self):
         self.interior = {}
         self.energia = 0
+        self.transportando = False
 
 
 class Citoplasma(object):
@@ -112,6 +118,7 @@ class Citoplasma(object):
         self.interior = {}
         self.energia = 0
         self.pilha = []
+        self.transportando = False
 
     def pedir_energia(self, receptor, importancia, quantidade, retorno=False):
         self.pilha.append(
@@ -142,6 +149,7 @@ class Membrana(object):
         self.osmose_taxa = 0
         self.interior = {}
         self.energia = 0
+        self.transportando = False
 
 
 class ParedeCelular(object):
@@ -149,6 +157,7 @@ class ParedeCelular(object):
         self.receptores = {}
         self.emissor = {}
         self.energia = 0
+        self.transportando = False
 
 
 class Cloroplasto(object):
@@ -159,6 +168,7 @@ class Cloroplasto(object):
         self.recursos = {"Água": 0, "CO2": 0, "O2": 0}
         self.rect = pg.Rect((0, 0), (10, 10))
         self.cor = (0, 255, 0)
+        self.transportando = False
 
     # PRECISA DE OTIMIZAÇÃO!!
     def fotossintese(self, fonte_luz):
@@ -166,17 +176,15 @@ class Cloroplasto(object):
         self.inventario()
         # verifica se tem os recursos minimos
         if fonte_luz is not None:
-            if self.recursos["Água"] >= 1:
-                if self.recursos['CO2'] >= 1:
-                    self.recursos["Água"] -= 1
-                    self.recursos["CO2"] -= 1
+            if self.recursos["Água"] >= 6:
+                if self.recursos['CO2'] >= 6:
                     # gasta os recursos usados
-                    self.gastar_substancia("Água", 1)
-                    self.gastar_substancia("CO2", 1)
+                    self.gastar_substancia("Água", 6)
+                    self.gastar_substancia("CO2", 6)
                     # gera e aloca o produto da reacao
-                    oxigenio = Particula("O2", transportando=True, destino="Exterior")
+                    oxigenio = Particula("O2", transportando=True, destino="Citoplasma")
                     ocupa_interior(self, oxigenio)
-                    self.cor = (255, 255, 255)
+                    self.transportando = True
                     return self.retorno_energetico
             else:
                 return 0
@@ -193,6 +201,7 @@ class Cloroplasto(object):
 
     def gastar_substancia(self, substancia, qnt):
         ct = 0
+        self.recursos[substancia] -= qnt
         for particula in self.interior.copy().values():
             if ct <= qnt:
                 if particula.nome == substancia:
@@ -200,12 +209,6 @@ class Cloroplasto(object):
                     ct += 1
             else:
                 break
-
-    def draw(self, display, cell_rect):
-        self.rect.center = (cell_rect.x + cell_rect.w / 2, cell_rect.y + cell_rect.h / 2 + 3)
-        pg.draw.ellipse(display, self.cor, self.rect, 5)
-        pg.time.wait(50)
-        self.cor = (0, 255, 0)
 
 
 class Particula(object):

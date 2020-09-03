@@ -7,8 +7,8 @@ import sprites
 
 # apenas para fins de teste
 def acesso_primeiro():
-    ocupa_interior(celula.citoplasma, Particula("Água", transportando=True, destino="Cloroplasto"))
-    ocupa_interior(celula.citoplasma, Particula("CO2", transportando=True, destino="Cloroplasto"))
+    ocupa_interior(celula.carioteca, Particula("Água", transportando=True, destino="Cloroplasto"))
+    ocupa_interior(celula.carioteca, Particula("CO2", transportando=True, destino="Cloroplasto"))
     celula.transporte_passivo()
     celula.cloroplastos.inventario()
 
@@ -34,7 +34,7 @@ agua = Particula("Água", transportando=True, destino="Cloroplasto")
 
 # cria um objeto Celula
 celula = Celula()
-celula.citoplasma.energia = 1
+celula.citoplasma.energia = 2.5
 celula.fonte_luz = FonteLuz(1, 1)
 
 # Flags
@@ -48,6 +48,8 @@ sprite_celula = sprites.CelulaSprite()
 left_gui = sprites.LeftGui()
 bottom_gui = sprites.BottomGui()
 right_gui = sprites.RightGui()
+carioteca = sprites.CariotecaSprite(sprite_celula)
+cloroplasto = sprites.CloroplastoSprite(sprite_celula)
 
 # collidepoints
 quick_a = pg.Rect((bottom_gui.quick_acess_a.x + bottom_gui.pos[0],
@@ -59,8 +61,12 @@ quick_c = pg.Rect((bottom_gui.quick_acess_c.x + bottom_gui.pos[0],
 bottom_capsule = pg.Rect((bottom_gui.rect.x + bottom_gui.pos[0],
                           bottom_gui.rect.y + bottom_gui.pos[1]), (350, 60))
 
+# grupo sprites da celula
+
+celula_group = pg.sprite.Group(sprite_celula, carioteca, cloroplasto)
+
 while True:  # main game loop
-    clock.tick(120)
+    clock.tick(60)
 
     # trata os eventos de mouse e sistema
     for event in pg.event.get():
@@ -81,31 +87,46 @@ while True:  # main game loop
             else:
                 sprite_celula.set_target(pg.mouse.get_pos())
 
+    # animação piscar ao ativar função (transporte ou fotossintese, mudar nome da variavel)
+    carioteca.transportando = celula.carioteca.transportando
+    cloroplasto.transportando = celula.cloroplastos.transportando
+
+    if carioteca.transportando:
+        if count % 30 == 0:
+            celula.carioteca.transportando = False
+    if cloroplasto.transportando:
+        if count % 30 == 0:
+            celula.cloroplastos.transportando = False
+
     # prenche background
     janela.fill((253, 253, 150))
 
     # contadores PRECISA DE OTIMIZAÇÃO
-    ec_surf, energia_counter = myfont.render(f"ENERGIA: {round(celula.citoplasma.energia)}", (0, 0, 0))
+    ec_surf, energia_counter = myfont.render(f"ENERGIA: {round(celula.citoplasma.energia, 2)}", (0, 0, 0))
     ac_surf, agua_counter = myfont.render(f"      AGUA: {celula.cloroplastos.recursos['Água']}", (0, 0, 0))
     co_surf, co_counter = myfont.render(f"          CO₂: {celula.cloroplastos.recursos['CO2']}", (0, 0, 0))
     o_surf, o_counter = myfont.render(f"            O₂: {celula.cloroplastos.recursos['O2']}", (0, 0, 0))
+    fps_surf, fps_rect = myfont.render(f"fps: {round(clock.get_fps())}", (50, 50, 50))
 
     # atualiza sprites da celula e define visibilidade do bottom gui
-    sprite_celula.update()
+    celula_group.update()
     bottom_gui.show = bottom_show
     bottom_gui.update()
 
     # desenha sprites
+    janela.blit(carioteca.image, carioteca.pos)
     janela.blit(sprite_celula.image, sprite_celula.pos)
+    janela.blit(bottom_gui.image, bottom_gui.pos)
     janela.blit(left_gui.image, left_gui.pos)
     janela.blit(right_gui.image, right_gui.pos)
-    janela.blit(bottom_gui.image, bottom_gui.pos)
 
     # desenha contadores
     janela.blit(ec_surf, (right_gui.pos[0] + 20, right_gui.pos[1] + 20))
     janela.blit(ac_surf, (right_gui.pos[0] + 20, right_gui.pos[1] + 45))
     janela.blit(co_surf, (right_gui.pos[0] + 20, right_gui.pos[1] + 70))
     janela.blit(o_surf, (right_gui.pos[0] + 20, right_gui.pos[1] + 95))
+    janela.blit(fps_surf, (rect_janela.w/2 - 30, 10))
 
-    # atualiza displau
+    # atualiza display
+    count += 1
     pg.display.flip()
