@@ -9,7 +9,6 @@ from random import randint
 def ocupa_interior(self, particula):
     self.interior[particula.id] = particula
 
-
 class Celula(object):
     def __init__(self):
         self.xna = json.load(open('xna_tiles/xna_demo.json', 'r'))
@@ -91,7 +90,6 @@ class Celula(object):
                     self.migrar(self.citoplasma, self.cloroplastos, particula)
         import time
 
-
     def gera_energia(self):
         self.citoplasma.energia += self.cloroplastos.fotossintese(self.fonte_luz)
 
@@ -101,7 +99,7 @@ class Celula(object):
                 self.parede_celular.emissor = {particula.nome: particula.destino}
                 self.membrana.interior.pop(id)
         else:
-            if self.citoplasma.pedir_energia(destino, 1, 0.1):
+            if self.citoplasma.pedir_energia(destino, 1, 0):
                 ocupa_interior(destino, particula)
                 origem.interior.pop(particula.id)
 
@@ -188,6 +186,8 @@ class Cloroplasto(object):
                     return self.retorno_energetico
             else:
                 return 0
+        else:
+            return 0
 
     def inventario(self):
         self.recursos = {"Água": 0, "CO2": 0, "O2": 0}
