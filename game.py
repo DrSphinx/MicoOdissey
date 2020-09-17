@@ -11,12 +11,11 @@ import json
 particulas = {"Água": Particula("Água", transportando=True, destino="Cloroplasto"), "CO2": Particula("CO2", transportando=True, destino="Cloroplasto")}
 
 
-
 # Incie pg
 pg.init()
 
 # tela de jogo 
-janela = pg.display.set_mode((500, 600))
+janela = pg.display.set_mode((1920, 1280))
 rect_janela = janela.get_rect()
 
 # salva a resolução num arquivo resolution
@@ -27,8 +26,8 @@ clock = pg.time.Clock()
 
 # define fonte
 pygame.freetype.init()
-myfont = pg.freetype.SysFont('Comic Sans MS', int(janela.get_width() * 0.03))
-myfont_b = pg.freetype.SysFont('Comic Sans MS', int(janela.get_width() * 0.02))
+myfont = pg.freetype.SysFont('Comic Sans MS', int(15))
+myfont_b = pg.freetype.SysFont('Comic Sans MS', int(10))
 
 # define particulas de teste
 adrenalina = Particula("Adrenalina", transportando=True, destino="Cloroplasto")
@@ -40,6 +39,12 @@ celula = Celula()
 celula.citoplasma.energia = 2.5
 celula.fonte_luz = FonteLuz(1, 1)
 
+##
+enemy = Celula()
+enemy.citoplasma.energia = 2.5
+celula.fonte_luz = FonteLuz(1, 1)
+sprite_enemy = sprites.CelulaSprite(speed=0.55)
+
 # Flags
 count = 0
 quick_a_descr = False
@@ -49,12 +54,10 @@ bottom_show = True
 r_collapse = False
 
 # Sprites
-sprite_celula = sprites.CelulaSprite(speed=((janela.get_width() + janela.get_height()) * 0.001))
+sprite_celula = sprites.CelulaSprite(speed = 0.5)
 left_gui = sprites.LeftGui()
 bottom_gui = sprites.BottomGui()
 right_gui = sprites.RightGui()
-carioteca = sprites.CariotecaSprite(sprite_celula)
-cloroplasto = sprites.CloroplastoSprite(sprite_celula)
 
 # collidepoints PRECISA DE OTIMIZAÇÃO
 if True:
@@ -78,7 +81,8 @@ if True:
 
 # grupo sprites da celula
 
-celula_group = pg.sprite.Group(sprite_celula, carioteca, cloroplasto)
+celula_group = pg.sprite.Group(sprite_celula, sprite_celula.carioteca, sprite_celula.cloroplasto)
+enemy_celula_group = pg.sprite.Group(sprite_enemy, sprite_enemy.carioteca, sprite_enemy.cloroplasto)
 gui_group = pg.sprite.Group(left_gui, right_gui, bottom_gui)
 
 substancia_group = pg.sprite.Group()
@@ -86,6 +90,7 @@ substancias = ["Água", "CO2"]
 for i in range(5):
     substancia_group.add(sprites.SubstanciaSprite(choice(substancias)))
 
+camera_pos = pg.Vector2(0, 0)
 while True:  # main game loop
     clock.tick(120)
 
@@ -123,14 +128,14 @@ while True:  # main game loop
                 quick_c_descr = False
 
     # animação piscar ao ativar função (transporte ou fotossintese, mudar nome da variavel)
-    carioteca.transportando = celula.carioteca.transportando
-    cloroplasto.transportando = celula.cloroplastos.transportando
+    sprite_celula.carioteca.transportando = celula.carioteca.transportando
+    sprite_celula.transportando = celula.cloroplastos.transportando
 
     # flags de animação de transporte
-    if carioteca.transportando:
+    if sprite_celula.carioteca.transportando:
         if count % 30 == 0:
             celula.carioteca.transportando = False
-    if cloroplasto.transportando:
+    if sprite_celula.cloroplasto.transportando:
         if count % 30 == 0:
             celula.cloroplastos.transportando = False
 
@@ -149,11 +154,15 @@ while True:  # main game loop
     qb_descr_surf, qb_descr = myfont_b.render(f"Coletar Água e CO2", (0, 0, 0))
     qc_descr_surf, qc_descr = myfont_b.render(f"Acesso Rapido 3", (0, 0, 0))
 
+
     # atualiza sprites da celula e define visibilidade do bottom gui
     celula_group.update()
+    sprite_enemy.update()
     bottom_gui.show = bottom_show
     bottom_gui.update()
     substancia_group.update()
+
+
 
     for substancia in substancia_group.sprites():
         janela.blit(substancia.image, substancia.pos)
@@ -168,19 +177,21 @@ while True:  # main game loop
 
     # desenha sprites
     janela.blit(sprite_celula.image, sprite_celula.pos)
+    janela.blit(sprite_enemy.image, (400, 400))
     janela.blit(bottom_gui.image, bottom_gui.pos)
     janela.blit(left_gui.image, left_gui.pos)
     janela.blit(right_gui.image, right_gui.pos)
+    #janela.blit(flagelo.image, flagelo.pos)
 
     # desenha contadores
-    espacamento = janela.get_height() * 0.042
-    inicio_w = janela.get_width() * 0.04
-    inicio_h = janela.get_height() * 0.033
+    espacamento = 200
+    inicio_w = right_gui.rect.x = 150
+    inicio_h = right_gui.rect.h / 2
 
     janela.blit(ec_surf, (right_gui.pos[0] + inicio_w, right_gui.pos[1] + inicio_h))
-    janela.blit(ac_surf, (right_gui.pos[0] + inicio_w, right_gui.pos[1] + inicio_h + espacamento))
-    janela.blit(co_surf, (right_gui.pos[0] + inicio_w, right_gui.pos[1] + inicio_h + espacamento * 2))
-    janela.blit(o_surf, (right_gui.pos[0] + 20, right_gui.pos[1] + inicio_h + espacamento * 3))
+    janela.blit(ac_surf, (right_gui.pos[0] + inicio_w + espacamento, right_gui.pos[1] + inicio_h))
+    janela.blit(co_surf, (right_gui.pos[0] + inicio_w + espacamento * 2 , right_gui.pos[1] + inicio_h))
+    janela.blit(o_surf, (right_gui.pos[0] + inicio_w + espacamento * 3, right_gui.pos[1] + inicio_h))
     janela.blit(fps_surf, (rect_janela.w / 2 - 25, 10))
 
     # flags gui
